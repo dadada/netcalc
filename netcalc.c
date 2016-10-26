@@ -7,15 +7,17 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <signal.h>
 
-int cleanup(int sockfd)
+#define BUFLEN 67
+
+int sockfd;
+
+void cleanup(int signum)
 {
 	if (close(sockfd) != 0) {
-		perror("listen");
-		return -1;
+		perror("close");
 	}
-
-	return 0;
 }
 
 int prepaddr(char *host, char *port, struct addrinfo **ainfo)
@@ -56,69 +58,96 @@ void printaddr(struct addrinfo *ainfo)
 int prepsocket(struct addrinfo *ainfo)
 {
 
-	int sockfd = socket(ainfo->ai_family, ainfo->ai_socktype, ainfo->ai_protocol);
+	sockfd = socket(ainfo->ai_family, ainfo->ai_socktype, ainfo->ai_protocol);
 
 	if (sockfd == -1) {
 		perror("socket");
 		return -1;
 	}
 
-	if (bind(sockfd, ainfo->ai_addr, ainfo->ai_addrlen) != 0) {
-		perror("bind");
-		cleanup(sockfd);
-		return -1;
-	}
-
 	int yes = 1;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes) == -1) {
 		perror("setsockopt");
-		cleanup(sockfd);
+		cleanup(0);
 		return -1;
-	} 
+	}
+
+	if (bind(sockfd, ainfo->ai_addr, ainfo->ai_addrlen) != 0) {
+		perror("bind");
+		cleanup(0);
+		return -1;
+	}
 
 	if (listen(sockfd, 5) != 0) {
 		perror("listen");
-		cleanup(sockfd);
+		cleanup(0);
 		return -1;
 	}
 	return sockfd;
 }
 
+int server()
+{
+	while (1) {
+		struct sockaddr_storage c_addr;
+		socklen_t sin_size = sizeof c_addr;
+		int c_fd = accept(sockfd, (struct sockaddr *)&c_addr, &sin_size);
+
+		if (c_fd == -1) {
+			perror("accept");
+			continue; // we do not care
+		}
+		
+		char buf[BUFLEN];
+		
+		ssize_t byte_count = recv(c_fd, buf, sizeof buf, 0);
+		if (byte_count == -1) {
+			perror("recv");
+			continue;
+		}
+
+		printf("received %ld bytes containig %s", byte_count, buf);
+
+		//calc(&buf, strlen(buf));
+
+		if (send(c_fd, buf, strlen(buf), 0) == -1) {
+			perror("send");
+			continue;
+		}
+
+		close(c_fd);
+	}
+}
+
 int main(int argc, char *argv[])
 {
-	if (argc != 3) {
-		fprintf(stderr,"usage: netcalc hostname port\n");
-		return 1;
+	char* host = "localhost";
+	char* port = "5000";
+
+	if (argc > 1) {
+		port = argv[1];
 	}
 
 	struct addrinfo *ainfo;
-	if (prepaddr(argv[1], argv[2], &ainfo) != 0) {
+	if (prepaddr(host, port, &ainfo) != 0) {
 		fprintf(stderr, "server: failed to obtain adress.");
 		return 1;
 	}
 
 	printaddr(ainfo);
 
-	int sockfd;
 	if ((sockfd = prepsocket(ainfo)) == -1) {
 		return 1;
 	}
 
-	while (1) {
-		struct sockaddr_storage c_addr;
-		socklen_t sin_size = sizeof c_addr;
-		int c_fd = accept(sockfd, (struct sockaddr *)&c_addr, &sin_size);
-		if (c_fd == -1) {
-			perror("accept");
-			continue; // we do not care
-		}
-		if (send(c_fd, "Hello world!\n", 14, 0) == -1) {
-			perror("send");
-		}
-		close(c_fd);
-	}
+	struct sigaction action;
+	memset(&action, 0, sizeof(struct sigaction));
+	action.sa_handler = cleanup;
+	sigaction(SIGTERM, &action, NULL);
 
-	cleanup(sockfd);
+	server();
+
+	cleanup(0);
 	freeaddrinfo(ainfo); // free the linked list
 	return 0;
 }
