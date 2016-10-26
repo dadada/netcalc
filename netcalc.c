@@ -206,14 +206,18 @@ int server()
 				continue;
 			}
 	
+			memset(buf, 0, sizeof buf);
+
 			unsigned int result;
 			if (calc(first, second, op, &result) == -1) {
-				fprintf(stderr, "calc: invalid operator %c for %u and %u", op, first, second);
-				continue;
+				char *errormsg = "error: %u %c %u invalid\n";
+				fprintf(stderr, errormsg, op, first, second);
+				sprintf(buf, errormsg, first, op, second);
+			} else {
+				printf("%u %c %u = %u\n", first, op, second, result);
+				sprintf(buf, "%u\n", result);
+
 			}
-			memset(buf, 0, sizeof buf);
-			printf("%u %c %u = %u\n", first, op, second, result);
-			sprintf(buf, "%u\n", result);
 			if (send(c_fd, buf, sizeof buf, 0) == -1) {
 				perror("send");
 				continue;
