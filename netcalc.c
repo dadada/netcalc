@@ -8,8 +8,9 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <signal.h>
+#include <limits.h>
 
-#define BUFLEN 67
+#define BUFLEN 69
 
 int sockfd;
 
@@ -86,6 +87,86 @@ int prepsocket(struct addrinfo *ainfo)
 	return sockfd;
 }
 
+int readnum(char *buf, size_t buflen, unsigned int *res)
+{
+	size_t bytes_read = 0;
+	char *p = buf;
+
+	while (bytes_read < buflen && *p!='+' && *p!='+'&& *p!='-'&& *p!='*'&& *p!='/' && *p!='\n') {
+		bytes_read++;
+		p++;
+	}
+
+	int bytes_to_copy = bytes_read;
+	int base = 10;
+
+	if (bytes_read > 2 && buf[0] == '0' && buf[1] == 'x') {
+		base = 16;
+	} else if (bytes_read > 1 && buf[bytes_read-1] == 'b') {
+		base = 2;
+		bytes_to_copy--;
+	}
+
+	char num[35];
+	strncpy(num, buf, bytes_to_copy);
+	num[bytes_to_copy] = '\0';
+
+	unsigned long parsed = strtoul(num, NULL, base);
+	if (parsed == ULONG_MAX) {
+		perror("strtoul");
+		return -1;
+	}
+
+	*res = (unsigned int) parsed;
+
+	return bytes_read;
+}
+
+int calc(unsigned int num1, unsigned int num2, char op, unsigned int *result)
+{
+	// TODO check for over/under flow
+	switch (op) {
+		case '+':
+			*result = num1 + num2;
+			break;
+		case '-':
+			*result = num1 - num2;
+			break;
+		case '*':
+			*result = num1 * num2;
+			break;
+		case '/':
+			*result = num1 / num2;
+			break;
+		default:
+			return -1;
+	}
+	return 0;
+}
+
+int parse(char *buf, size_t buflen, unsigned int *first, unsigned int *second, char *op)
+{
+	//read first number
+
+	size_t read = readnum(buf, buflen, first);
+        if (read == -1) {
+		return -1;
+	}
+
+	// read operator
+	if (read < buflen) {
+		*op = buf[read];
+		read++;
+	}
+
+	// read second number
+        if (readnum(buf+read, buflen-read, second) == -1) {
+		return -1;
+	}
+
+	return 0;
+}
+
 int server()
 {
 	while (1) {
@@ -100,19 +181,34 @@ int server()
 		
 		char buf[BUFLEN];
 		
-		ssize_t byte_count = recv(c_fd, buf, sizeof buf, 0);
-		if (byte_count == -1) {
-			perror("recv");
-			continue;
-		}
+		ssize_t byte_count;
+		while ((byte_count = recv(c_fd, buf, sizeof buf, 0)) != 0) {
+			if (byte_count == -1) {
+				perror("recv");
+				break;
+			}
 
-		printf("received %ld bytes containig %s", byte_count, buf);
-
-		//calc(&buf, strlen(buf));
-
-		if (send(c_fd, buf, strlen(buf), 0) == -1) {
-			perror("send");
-			continue;
+			printf("received %ld bytes containig %s\n", byte_count, buf);
+	
+			unsigned int first, second;
+			char op;
+			if (parse(buf, sizeof buf, &first, &second, &op) == -1) {
+				fprintf(stderr, "parser: failed to parse");
+				continue;
+			}
+	
+			unsigned int result;
+			if (calc(first, second, op, &result) == -1) {
+				fprintf(stderr, "calc: invalid operator %c for %u and %u", op, first, second);
+				continue;
+			}
+			memset(buf, 0, sizeof buf);
+			printf("%u %c %u = %u\n", first, op, second, result);
+			sprintf(buf, "%u\n", result);
+			if (send(c_fd, buf, sizeof buf, 0) == -1) {
+				perror("send");
+				continue;
+			}
 		}
 
 		close(c_fd);
