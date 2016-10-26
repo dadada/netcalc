@@ -127,15 +127,24 @@ int calc(unsigned int num1, unsigned int num2, char op, unsigned int *result)
 	// TODO check for over/under flow
 	switch (op) {
 		case '+':
-			*result = num1 + num2;
+			if (__builtin_uadd_overflow(num1, num2, result)) {
+				return -1;
+			}
 			break;
 		case '-':
-			*result = num1 - num2;
+			if (__builtin_usub_overflow(num1, num2, result)) {
+				return -1;
+			}
 			break;
 		case '*':
-			*result = num1 * num2;
+			if (__builtin_umul_overflow(num1, num2, result)) {
+				return -1;
+			}
 			break;
 		case '/':
+			if (num1 == 0 || num2 == 0) {
+				return -1;
+			}
 			*result = num1 / num2;
 			break;
 		default:
