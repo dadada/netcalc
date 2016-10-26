@@ -10,7 +10,7 @@
 #include <signal.h>
 #include <limits.h>
 
-#define BUFLEN 69
+#define BUFLEN 512
 
 int sockfd;
 
@@ -163,7 +163,7 @@ int parse(char *buf, size_t buflen, unsigned int *first, unsigned int *second, c
 	}
 
 	// read operator
-	if (read < buflen) {
+	if (read < buflen && buf[read] != '\n' && buf[read] != '\0') {
 		*op = buf[read];
 		read++;
 	}
@@ -197,9 +197,8 @@ int server()
 				break;
 			}
 
-			printf("received %ld bytes containig %s\n", byte_count, buf);
-	
-			unsigned int first, second;
+			unsigned int first;
+			unsigned int second;
 			char op;
 			if (parse(buf, sizeof buf, &first, &second, &op) == -1) {
 				fprintf(stderr, "parser: failed to parse");
@@ -211,12 +210,12 @@ int server()
 			unsigned int result;
 			if (calc(first, second, op, &result) == -1) {
 				char *errormsg = "error: %u %c %u invalid\n";
-				fprintf(stderr, errormsg, op, first, second);
+				fprintf(stderr, errormsg, first, op, second);
 				sprintf(buf, errormsg, first, op, second);
 			} else {
 				printf("%u %c %u = %u\n", first, op, second, result);
-				sprintf(buf, "%u\n", result);
-
+				// TODO output binary format
+				sprintf(buf, "%u 0x%X \n", result, result);
 			}
 			if (send(c_fd, buf, sizeof buf, 0) == -1) {
 				perror("send");
