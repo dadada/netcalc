@@ -76,41 +76,6 @@ int prepsocket(struct addrinfo *ainfo)
 	return SOCKFD;
 }
 
-int readnum(char *buf, size_t buflen, unsigned int *res)
-{
-	size_t bytes_read = 0;
-	char *p = buf;
-
-	while (bytes_read < buflen && *p!='+' && *p!='+'&& *p!='-'&& *p!='*'&& *p!='/' && *p!='\n') {
-		bytes_read++;
-		p++;
-	}
-
-	int bytes_to_copy = bytes_read;
-	int base = 10;
-
-	if (bytes_read > 2 && buf[0] == '0' && buf[1] == 'x') {
-		base = 16;
-	} else if (bytes_read > 1 && buf[bytes_read-1] == 'b') {
-		base = 2;
-		bytes_to_copy--;
-	}
-
-	char num[35];
-	strncpy(num, buf, bytes_to_copy);
-	num[bytes_to_copy] = '\0';
-
-	unsigned long parsed = strtoul(num, NULL, base);
-	if (parsed == ULONG_MAX) {
-		perror("strtoul");
-		return -1;
-	}
-
-	*res = (unsigned int) parsed;
-
-	return bytes_read;
-}
-
 int calc(unsigned int num1, unsigned int num2, char op, unsigned int *result)
 {
 	switch (op) {
@@ -141,27 +106,54 @@ int calc(unsigned int num1, unsigned int num2, char op, unsigned int *result)
 	return 0;
 }
 
+int base(char *numstr, unsigned int *num)
+{
+	short base = 10;
+
+	size_t len = strlen(numstr);
+	if (len > 1 && numstr[len-1] == 'b') {
+		base = 2;
+	} else if (len > 2 && numstr[0] == '0' && numstr[1] == 'x') {
+		base = 16;
+	}
+
+	unsigned long test = strtoul(numstr, NULL, base);
+	if (test <= UINT_MAX) {
+		*num = (unsigned int) test;
+		return base;
+	} else {
+	       return 0;	
+	}
+}
+
 int parse(char *buf, size_t buflen, unsigned int *first, unsigned int *second, char *op)
 {
-	//read first number
+	char *num1str = NULL;
+	char *num2str = NULL;
+	char *opstr = NULL;
 
-	size_t read = readnum(buf, buflen, first);
-        if (read == -1) {
-		return -1;
+	ssize_t num_items = sscanf(buf, "%m[x,0-9,A-F,b]%m[+,-,*,/]%m[x,0-9,A-F,b]", &num1str, &opstr, &num2str);
+
+	int status = 0;
+	if (num_items < 3) {
+		if (num_items == 1 && base(num1str, first) > 0) {
+			status = -2;
+		} else {
+			status = -1;
+		}
+	} else if (base(num2str, second) == 0 || base(num1str, first) == 0) {
+		status = -1;
 	}
 
-	// read operator
-	if (read < buflen && buf[read] != '\n' && buf[read] != '\0') {
-		*op = buf[read];
-		read++;
+	if (opstr) {
+		*op = opstr[0];
 	}
 
-	// read second number
-        if (readnum(buf+read, buflen-read, second) == -1) {
-		return -1;
-	}
+	free(num1str);
+	free(num2str);
+	free(opstr);
 
-	return 0;
+	return status;
 }
 
 void report_error(char *buf, unsigned long buflen, char *msg)
@@ -199,7 +191,7 @@ int server()
 			char op;
 			unsigned int result;
 
-			if (parse(buf, sizeof buf, &first, &second, &op) == -1) {
+			if (parse(buf, sizeof buf, &first, &second, &op) < 0) {
 				report_error(buf, BUFLEN, "parse: failed to parse");
 			} else if (calc(first, second, op, &result) == -1) {
 				report_error(buf, BUFLEN, "calc: failed to calculate");
@@ -229,54 +221,35 @@ int connectclient(struct addrinfo *ainfo)
 	return 0;
 }
 
-int base(char *num)
-{
-	size_t len = strlen(num);
-	char *num_cpy;
-	if (sscanf(num, "%m[0-9]", &num_cpy) == 1 && strtoul(num_cpy, NULL, 10) < UINT_MAX) { // dec
-		return 10;
-	} else if (sscanf(num, "%m[0-1]b", &num_cpy) == 1 && strtoul(num_cpy, NULL, 2) < UINT_MAX) { // bin
-		return 2;
-
-	} else if (sscanf(num, "%m[0-1]b", &num_cpy) == 1 && strtoul(num_cpy, NULL, 2) < UINT_MAX) { // hex
-		return 16;
-	} else {
-		return 0;
-	}
-}
-
 int client()
 {
 	char buf[BUFLEN];
 	size_t nullsize = 0;
 	char *line = NULL;
 	while (getline(&line, &nullsize, stdin) != -1) {
-		char *num1 = NULL;
-		char *num2 = NULL;
-		char *op = NULL;
+		unsigned int num1;
+		unsigned int num2;
+		char op;
+		
+		int status = parse(line, sizeof buf, &num1, &num2, &op);
+		memset(buf, 0, BUFLEN);
 
-		ssize_t num_items = sscanf(line, "%m[0-9,A-F,x,b]%m[+,-,*,/]%m[x,0-9,A-F,b]", &num1, &op, &num2);
-		printf("debug: %lu items read from %s", num_items, line);
-
-		if (num_items == 3 && (base(num1) == 0 || base(num2) == 0)) {
-			fprintf(stderr, "base: illegal input");
-		} else if (num_items == 1 && num1 != NULL && base(num1) > 0) {
-			op = "+";
-			num2 = "0";
-		} else if (num_items < 3) {
-			fprintf(stderr, "too few arguments");
-		} else { // send input
-			printf("debug: sending %s", line);
+		if (status == -1) {
+			report_error(buf, BUFLEN, "parse: failed to parse");
+			continue;
+		} else if (status == -2) {
+			op = '+';
+			num2 = 0;
 		}
 
-		if (send(SOCKFD, line, strlen(line), 0) == -1) {
+		sprintf(buf, "%u%c%u", num1, op, num2);
+
+		if (send(SOCKFD, buf, strlen(buf), 0) == -1) {
 			perror("recv");
 			continue;
 		}
 
-		free(num1);
-		free(num2);
-		free(op);
+
 		free(line);
 		line = NULL; // so getline allocates a buffer for us
 
