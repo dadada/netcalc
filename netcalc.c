@@ -12,17 +12,20 @@
 
 #define BUFLEN 512
 
-int sockfd;
+int SOCKFD;
+
+int CLIENT;
 
 void cleanup(int signum)
 {
-	if (close(sockfd) != 0) {
+	if (close(SOCKFD) != 0) {
 		perror("close");
 	}
 }
 
 int prepaddr(char *host, char *port, struct addrinfo **ainfo)
 {
+	fprintf(stderr, "debug: %s %s\n", host, port);
 	struct addrinfo hints; // hints to what we want
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET6; // AF_INET or AF_INET6 to force version
@@ -38,34 +41,39 @@ int prepaddr(char *host, char *port, struct addrinfo **ainfo)
 	return 0;
 }
 
-int prepsocket(struct addrinfo *ainfo)
+int bindsocket(int sockd, struct addrinfo *ainfo)
 {
-	sockfd = socket(ainfo->ai_family, ainfo->ai_socktype, ainfo->ai_protocol);
-
-	if (sockfd == -1) {
-		perror("socket");
-		return -1;
-	}
-
-	int yes = 1;
-	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes) == -1) {
-		perror("setsockopt");
-		cleanup(0);
-		return -1;
-	}
-
-	if (bind(sockfd, ainfo->ai_addr, ainfo->ai_addrlen) != 0) {
+	if (bind(SOCKFD, ainfo->ai_addr, ainfo->ai_addrlen) != 0) {
 		perror("bind");
 		cleanup(0);
 		return -1;
 	}
 
-	if (listen(sockfd, 5) != 0) {
+	if (listen(SOCKFD, 5) != 0) {
 		perror("listen");
 		cleanup(0);
 		return -1;
 	}
-	return sockfd;
+	return sockd;
+}
+
+int prepsocket(struct addrinfo *ainfo)
+{
+	SOCKFD = socket(ainfo->ai_family, ainfo->ai_socktype, ainfo->ai_protocol);
+
+	if (SOCKFD == -1) {
+		perror("socket");
+		return -1;
+	}
+
+	int yes = 1;
+	if (setsockopt(SOCKFD, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes) == -1) {
+		perror("setsockopt");
+		cleanup(0);
+		return -1;
+	}
+
+	return SOCKFD;
 }
 
 int readnum(char *buf, size_t buflen, unsigned int *res)
@@ -105,7 +113,6 @@ int readnum(char *buf, size_t buflen, unsigned int *res)
 
 int calc(unsigned int num1, unsigned int num2, char op, unsigned int *result)
 {
-	// TODO check for over/under flow
 	switch (op) {
 		case '+':
 			if (__builtin_uadd_overflow(num1, num2, result)) {
@@ -157,18 +164,27 @@ int parse(char *buf, size_t buflen, unsigned int *first, unsigned int *second, c
 	return 0;
 }
 
+void report_error(char *buf, unsigned long buflen, char *msg)
+{
+	fprintf(stderr, "%s\n", msg);
+	memset(buf, 0, buflen);
+	sprintf(buf, "%s\n", msg);
+}
+
 int server()
 {
 	while (1) {
 		struct sockaddr_storage c_addr;
 		socklen_t sin_size = sizeof c_addr;
-		int c_fd = accept(sockfd, (struct sockaddr *)&c_addr, &sin_size);
+		int c_fd = accept(SOCKFD, (struct sockaddr *)&c_addr, &sin_size);
 
 		if (c_fd == -1) {
 			perror("accept");
 			continue; // we do not care
 		}
-		
+
+		fprintf(stderr, "debug: connected\n");
+
 		char buf[BUFLEN];
 		
 		ssize_t byte_count;
@@ -181,49 +197,82 @@ int server()
 			unsigned int first;
 			unsigned int second;
 			char op;
-			if (parse(buf, sizeof buf, &first, &second, &op) == -1) {
-				fprintf(stderr, "parser: failed to parse");
-				continue;
-			}
-	
-			memset(buf, 0, sizeof buf);
-
 			unsigned int result;
-			if (calc(first, second, op, &result) == -1) {
-				char *errormsg = "error: %u %c %u invalid\n";
-				fprintf(stderr, errormsg, first, op, second);
-				sprintf(buf, errormsg, first, op, second);
+
+			if (parse(buf, sizeof buf, &first, &second, &op) == -1) {
+				report_error(buf, BUFLEN, "parse: failed to parse");
+			} else if (calc(first, second, op, &result) == -1) {
+				report_error(buf, BUFLEN, "calc: failed to calculate");
+				fprintf(stderr, "debug: %u %c %u\n", first, op, second);
 			} else {
-				printf("%u %c %u = %u\n", first, op, second, result);
+				fprintf(stderr, "debug: %u %c %u = %u\n", first, op, second, result);
 				// TODO output binary format
+				memset(buf, 0, sizeof buf);
 				sprintf(buf, "%u 0x%X \n", result, result);
 			}
+
 			if (send(c_fd, buf, sizeof buf, 0) == -1) {
 				perror("send");
 				continue;
 			}
 		}
-
 		close(c_fd);
+	}
+}
+
+int connectclient(struct addrinfo *ainfo)
+{
+	if (connect(SOCKFD, ainfo->ai_addr, ainfo->ai_addrlen) == -1) {
+		perror("connect");
+		return -1;
+	}
+	return 0;
+}
+
+int client()
+{
+	char sendbuf[512];
+	char *num1 = NULL;
+	char *num2 = NULL;
+	char *op = NULL;
+	while (scanf("%m[0-9,A-F,x,b]%m[+,-,*,/]%m[0-9,A-F,x,b]", &num1, &op, &num2)) {
+		//fprintf(stdout, "%s %s %s\n", num1, op, num2);
+		free(num1);
+		free(num2);
+		free(op);
 	}
 }
 
 int main(int argc, char *argv[])
 {
-	char* host = NULL;
+	char* host = "localhost";
 	char* port = "5000";
 
 	if (argc > 1) {
-		port = argv[1];
+		if (strcmp(argv[1], "-c") == 0) {
+			printf("debug: argv[1] = %s running in client mode\n", argv[1]);
+			CLIENT = 1; // client mode
+			if (argc > 3) {
+				host = argv[2];
+				port = argv[3];
+			}
+		} else {
+			printf("debug: argv[1] = %s running in server mode\n", argv[1]);
+			CLIENT = 0;
+			if (argc > 2) {
+				host = NULL;
+				port = argv[1];
+			}
+		}
 	}
 
 	struct addrinfo *ainfo;
 	if (prepaddr(host, port, &ainfo) != 0) {
-		fprintf(stderr, "server: failed to obtain adress.");
+		fprintf(stderr, "prepaddr: failed to obtain adress.\n");
 		return 1;
 	}
 
-	if ((sockfd = prepsocket(ainfo)) == -1) {
+	if ((SOCKFD = prepsocket(ainfo)) == -1) {
 		return 1;
 	}
 
@@ -232,7 +281,20 @@ int main(int argc, char *argv[])
 	action.sa_handler = cleanup;
 	sigaction(SIGTERM, &action, NULL);
 
-	server();
+	if (CLIENT) {
+		connectclient(ainfo);
+		if (client() == -1) {
+			fprintf(stderr, "client: error");
+		}
+	} else {
+		if ((SOCKFD = bindsocket(SOCKFD, ainfo)) == -1) {
+			fprintf(stderr, "bindsocket: failed to bind or listen.");
+			return 1;
+		}
+		if (server() == -1) {
+			fprintf(stderr, "server: error");
+		}
+	}
 
 	cleanup(0);
 	freeaddrinfo(ainfo); // free the linked list
