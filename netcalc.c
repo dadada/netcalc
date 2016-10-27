@@ -163,6 +163,19 @@ void report_error(char *buf, unsigned long buflen, char *msg)
 	sprintf(buf, "%s\n", msg);
 }
 
+void bstr(unsigned int n, char **out)
+{
+	// voodoo
+	int msb =  32 - __builtin_clz(n);
+	(*out) = (char*) calloc(msb+1, sizeof (char));
+	printf("This is ZORK! %d\n", msb);
+	(*out)[msb] = '\0';
+	for (msb = msb-1; msb >= 0; msb--) {
+		(*out)[msb] = (char) (48 + n % 2);
+		n = n/2;
+	}
+}
+
 int server()
 {
 	while (1) {
@@ -200,7 +213,10 @@ int server()
 				fprintf(stderr, "debug: %u %c %u = %u\n", first, op, second, result);
 				// TODO output binary format
 				memset(buf, 0, sizeof buf);
-				sprintf(buf, "%u 0x%X \n", result, result);
+				char *bin;
+				bstr(result, &bin);
+				sprintf(buf, "%u 0x%X %sb\n", result, result, bin);
+				free(bin);
 			}
 
 			if (send(c_fd, buf, sizeof buf, 0) == -1) {
