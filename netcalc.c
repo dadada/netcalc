@@ -229,18 +229,66 @@ int connectclient(struct addrinfo *ainfo)
 	return 0;
 }
 
+int base(char *num)
+{
+	size_t len = strlen(num);
+	char *num_cpy;
+	if (sscanf(num, "%m[0-9]", &num_cpy) == 1 && strtoul(num_cpy, NULL, 10) < UINT_MAX) { // dec
+		return 10;
+	} else if (sscanf(num, "%m[0-1]b", &num_cpy) == 1 && strtoul(num_cpy, NULL, 2) < UINT_MAX) { // bin
+		return 2;
+
+	} else if (sscanf(num, "%m[0-1]b", &num_cpy) == 1 && strtoul(num_cpy, NULL, 2) < UINT_MAX) { // hex
+		return 16;
+	} else {
+		return 0;
+	}
+}
+
 int client()
 {
-	char sendbuf[512];
-	char *num1 = NULL;
-	char *num2 = NULL;
-	char *op = NULL;
-	while (scanf("%m[0-9,A-F,x,b]%m[+,-,*,/]%m[0-9,A-F,x,b]", &num1, &op, &num2)) {
-		//fprintf(stdout, "%s %s %s\n", num1, op, num2);
+	char buf[BUFLEN];
+	size_t nullsize = 0;
+	char *line = NULL;
+	while (getline(&line, &nullsize, stdin) != -1) {
+		char *num1 = NULL;
+		char *num2 = NULL;
+		char *op = NULL;
+
+		ssize_t num_items = sscanf(line, "%m[0-9,A-F,x,b]%m[+,-,*,/]%m[x,0-9,A-F,b]", &num1, &op, &num2);
+		printf("debug: %lu items read from %s", num_items, line);
+
+		if (num_items == 3 && (base(num1) == 0 || base(num2) == 0)) {
+			fprintf(stderr, "base: illegal input");
+		} else if (num_items == 1 && num1 != NULL) {
+			op = "+";
+			num2 = "0";
+		} else if (num_items < 3) {
+			fprintf(stderr, "too few arguments");
+		} else { // send input
+			printf("debug: sending %s", line);
+		}
+
+		if (send(SOCKFD, line, strlen(line), 0) == -1) {
+			perror("recv");
+			continue;
+		}
+
 		free(num1);
 		free(num2);
 		free(op);
+		free(line);
+		line = NULL; // so getline allocates a buffer for us
+
+		memset(buf, 0, BUFLEN);
+		ssize_t re_bytes_c = recv(SOCKFD, buf, sizeof buf, 0);
+		if (re_bytes_c == -1) {
+			perror("recv");
+			continue;
+		}
+		printf("%s", buf);
 	}
+	return -1;
 }
 
 int main(int argc, char *argv[])
