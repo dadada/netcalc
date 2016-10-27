@@ -260,7 +260,7 @@ int client()
 
 		if (num_items == 3 && (base(num1) == 0 || base(num2) == 0)) {
 			fprintf(stderr, "base: illegal input");
-		} else if (num_items == 1 && num1 != NULL) {
+		} else if (num_items == 1 && num1 != NULL && base(num1) > 0) {
 			op = "+";
 			num2 = "0";
 		} else if (num_items < 3) {
