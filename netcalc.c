@@ -168,7 +168,6 @@ void bstr(unsigned int n, char **out)
 	// voodoo
 	int msb =  32 - __builtin_clz(n);
 	(*out) = (char*) calloc(msb+1, sizeof (char));
-	printf("This is ZORK! %d\n", msb);
 	(*out)[msb] = '\0';
 	for (msb = msb-1; msb >= 0; msb--) {
 		(*out)[msb] = (char) (48 + n % 2);
