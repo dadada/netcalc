@@ -21,26 +21,6 @@ void cleanup(int signum)
 	}
 }
 
-void printaddr(struct addrinfo *ainfo)
-{
-	char ipstr[INET6_ADDRSTRLEN]; // will hold the IP adress, humanreadable
-	void *addr;
-	char *ipver;
-	for (struct addrinfo *p = ainfo; p->ai_next != NULL; p = p->ai_next) {
-		if (p->ai_family == AF_INET) { // IPv4
-			struct sockaddr_in *ipv4 = (struct sockaddr_in *) p->ai_addr;
-			addr = &(ipv4->sin_addr);
-			ipver = "IPv4";
-		} else { // IPv6
-			struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *) p->ai_addr;
-			addr = &(ipv6->sin6_addr);
-			ipver = "IPv6";
-		}
-		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
-		printf("Listening on  %s: %s\n", ipver, ipstr);
-	}
-}
-
 int prepaddr(char *host, char *port, struct addrinfo **ainfo)
 {
 	struct addrinfo hints; // hints to what we want
@@ -54,8 +34,6 @@ int prepaddr(char *host, char *port, struct addrinfo **ainfo)
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
 		return -1;
 	}
-
-	printaddr(*ainfo);
 
 	return 0;
 }
@@ -75,12 +53,6 @@ int prepsocket(struct addrinfo *ainfo)
 		cleanup(0);
 		return -1;
 	}
-	// yes means no!
-	//if (setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &yes, sizeof yes) == -1) {
-	//	perror("setsockopt");
-	//	cleanup(0);
-	//	return -1;
-	//}
 
 	if (bind(sockfd, ainfo->ai_addr, ainfo->ai_addrlen) != 0) {
 		perror("bind");
