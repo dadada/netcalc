@@ -23,12 +23,12 @@ void cleanup(int signum)
 	}
 }
 
-int prepaddr(char *host, char *port, struct addrinfo **ainfo, int flags)
+int prepaddr(char *host, char *port, struct addrinfo **ainfo, int afamily, int flags)
 {
 	fprintf(stderr, "debug: %s %s\n", host, port);
 	struct addrinfo hints; // hints to what we want
 	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_INET6; // AF_INET or AF_INET6 to force version
+	hints.ai_family = afamily; // AF_INET or AF_INET6 to force version
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = flags;
 
@@ -283,28 +283,28 @@ int main(int argc, char *argv[])
 {
 	char* host = NULL;
 	char* port = "5000";
+	int afamiliy = AF_UNSPEC;
 	int flags = 0;
 
-	if (argc > 1) {
-		if (strcmp(argv[1], "-c") == 0) {
-			printf("debug: argv[1] = %s running in client mode\n", argv[1]);
-			CLIENT = 1; // client mode
-			if (argc > 3) {
-				host = argv[2];
-				port = argv[3];
-			}
-		} else {
-			printf("debug: argv[1] = %s running in server mode\n", argv[1]);
-			CLIENT = 0;
-			if (argc > 2) {
-				port = argv[1];
-				flags |= AI_PASSIVE;
-			}
+	if (argc > 1 && strcmp(argv[1], "-c") == 0) {
+		printf("debug: argv[1] = %s running in client mode\n", argv[1]);
+		CLIENT = 1; // client mode
+		if (argc > 3) {
+			host = argv[2];
+			port = argv[3];
+		}
+	} else {
+		printf("debug: argv[1] = %s running in server mode\n", argv[1]);
+		CLIENT = 0;
+		afamiliy = AF_INET6;
+		flags |= AI_PASSIVE;
+		if (argc > 1) {
+			port = argv[1];
 		}
 	}
 
 	struct addrinfo *ainfo;
-	if (prepaddr(host, port, &ainfo, flags) != 0) {
+	if (prepaddr(host, port, &ainfo, afamiliy, flags) != 0) {
 		fprintf(stderr, "prepaddr: failed to obtain adress.\n");
 		return 1;
 	}
