@@ -218,7 +218,7 @@ int server()
 				free(bin);
 			}
 
-			if (send(c_fd, buf, sizeof buf, 0) == -1) {
+			if (send(c_fd, buf, strlen(buf)+1, 0) == -1) {
 				perror("send");
 				continue;
 			}
@@ -253,7 +253,8 @@ int client()
 		if (status == -1) {
 			report_error(buf, BUFLEN, "parse: failed to parse");
 		} else if (status == -2) {
-			sprintf(buf, "%u%c%u", num1, '+', "0");
+			printf("ZORK\n");
+			sprintf(buf, "%u%c%s", num1, '+', "0");
 		} else {
 			sprintf(buf, "%u%c%u", num1, op, num2);
 		}
