@@ -245,25 +245,23 @@ int client()
 		unsigned int num1;
 		unsigned int num2;
 		char op;
-		
-		int status = parse(line, sizeof buf, &num1, &num2, &op);
+
 		memset(buf, 0, BUFLEN);
+
+		int status = parse(line, strlen(line)+1, &num1, &num2, &op);
 
 		if (status == -1) {
 			report_error(buf, BUFLEN, "parse: failed to parse");
-			continue;
 		} else if (status == -2) {
-			op = '+';
-			num2 = 0;
+			sprintf(buf, "%u%c%u", num1, '+', "0");
+		} else {
+			sprintf(buf, "%u%c%u", num1, op, num2);
 		}
 
-		sprintf(buf, "%u%c%u", num1, op, num2);
-
-		if (send(SOCKFD, buf, strlen(buf), 0) == -1) {
+		if (send(SOCKFD, buf, strlen(buf)+1, 0) == -1) {
 			perror("recv");
 			continue;
 		}
-
 
 		free(line);
 		line = NULL; // so getline allocates a buffer for us
