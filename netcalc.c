@@ -23,14 +23,14 @@ void cleanup(int signum)
 	}
 }
 
-int prepaddr(char *host, char *port, struct addrinfo **ainfo)
+int prepaddr(char *host, char *port, struct addrinfo **ainfo, int flags)
 {
 	fprintf(stderr, "debug: %s %s\n", host, port);
 	struct addrinfo hints; // hints to what we want
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET6; // AF_INET or AF_INET6 to force version
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
+	hints.ai_flags = flags;
 
 	int status;
 	if ((status = getaddrinfo(host, port, &hints, ainfo)) != 0) {
@@ -281,8 +281,9 @@ int client()
 
 int main(int argc, char *argv[])
 {
-	char* host = "localhost";
+	char* host = NULL;
 	char* port = "5000";
+	int flags = 0;
 
 	if (argc > 1) {
 		if (strcmp(argv[1], "-c") == 0) {
@@ -296,14 +297,14 @@ int main(int argc, char *argv[])
 			printf("debug: argv[1] = %s running in server mode\n", argv[1]);
 			CLIENT = 0;
 			if (argc > 2) {
-				host = NULL;
 				port = argv[1];
+				flags |= AI_PASSIVE;
 			}
 		}
 	}
 
 	struct addrinfo *ainfo;
-	if (prepaddr(host, port, &ainfo) != 0) {
+	if (prepaddr(host, port, &ainfo, flags) != 0) {
 		fprintf(stderr, "prepaddr: failed to obtain adress.\n");
 		return 1;
 	}
