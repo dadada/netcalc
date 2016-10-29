@@ -1,10 +1,14 @@
 FILE = netcalc
 
-all: $(FILE)
+all: $(FILE) tests
 
 .PHONY: clean
 clean: 
 	rm netcalc
 
-$(FILE): netcalc.c
+$(FILE): $(FILE).c
 	gcc $^ -o $@
+
+tests:
+	./netcalc -c < test/cases > test/results
+	diff test/results test/expected
