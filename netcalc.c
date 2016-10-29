@@ -132,7 +132,7 @@ int parse(char *buf, size_t buflen, unsigned int *first, unsigned int *second, c
 	char *num2str = NULL;
 	char *opstr = NULL;
 
-	ssize_t num_items = sscanf(buf, "%m[x,0-9,A-F,b]%m[+,-,*,/]%m[x,0-9,A-F,b]", &num1str, &opstr, &num2str);
+	ssize_t num_items = sscanf(buf, "%m[x0-9A-Fb]%m[+-*/]%m[x0-9A-Fb]", &num1str, &opstr, &num2str);
 
 	int status = 0;
 	if (num_items < 3) {
