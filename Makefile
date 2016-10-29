@@ -4,7 +4,7 @@ all: $(FILE) tests
 
 .PHONY: clean
 clean: 
-	rm netcalc
+	rm netcalc test/results
 
 $(FILE): $(FILE).c
 	gcc $^ -o $@
