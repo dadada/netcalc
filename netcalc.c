@@ -253,7 +253,6 @@ int client()
 		if (status == -1) {
 			report_error(buf, BUFLEN, "parse: failed to parse");
 		} else if (status == -2) {
-			printf("ZORK\n");
 			sprintf(buf, "%u%c%s", num1, '+', "0");
 		} else {
 			sprintf(buf, "%u%c%u", num1, op, num2);
