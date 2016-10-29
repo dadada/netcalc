@@ -25,7 +25,6 @@ void cleanup(int signum)
 
 int prepaddr(char *host, char *port, struct addrinfo **ainfo, int afamily, int flags)
 {
-	fprintf(stderr, "debug: %s %s\n", host, port);
 	struct addrinfo hints; // hints to what we want
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = afamily; // AF_INET or AF_INET6 to force version
@@ -187,8 +186,6 @@ int server()
 			continue; // we do not care
 		}
 
-		fprintf(stderr, "debug: connected\n");
-
 		char buf[BUFLEN];
 		
 		ssize_t byte_count;
@@ -207,10 +204,7 @@ int server()
 				report_error(buf, BUFLEN, "parse: failed to parse");
 			} else if (calc(first, second, op, &result) == -1) {
 				report_error(buf, BUFLEN, "calc: failed to calculate");
-				fprintf(stderr, "debug: %u %c %u\n", first, op, second);
 			} else {
-				fprintf(stderr, "debug: %u %c %u = %u\n", first, op, second, result);
-				// TODO output binary format
 				memset(buf, 0, sizeof buf);
 				char *bin;
 				bstr(result, &bin);
@@ -252,6 +246,7 @@ int client()
 
 		if (status == -1) {
 			report_error(buf, BUFLEN, "parse: failed to parse");
+			continue;
 		} else if (status == -2) {
 			sprintf(buf, "%u%c%s", num1, '+', "0");
 		} else {
@@ -274,7 +269,7 @@ int client()
 		}
 		printf("%s", buf);
 	}
-	return -1;
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -285,14 +280,12 @@ int main(int argc, char *argv[])
 	int flags = 0;
 
 	if (argc > 1 && strcmp(argv[1], "-c") == 0) {
-		printf("debug: argv[1] = %s running in client mode\n", argv[1]);
 		CLIENT = 1; // client mode
 		if (argc > 3) {
 			host = argv[2];
 			port = argv[3];
 		}
 	} else {
-		printf("debug: argv[1] = %s running in server mode\n", argv[1]);
 		CLIENT = 0;
 		afamiliy = AF_INET6;
 		flags |= AI_PASSIVE;
