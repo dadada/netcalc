@@ -281,10 +281,15 @@ int main(int argc, char *argv[])
 
 	if (argc > 1 && strcmp(argv[1], "-c") == 0) {
 		CLIENT = 1; // client mode
-		if (argc > 3) {
+		if (argc > 2) {
 			host = argv[2];
-			port = argv[3];
+			if (argc > 3) {
+				port = argv[3];
+			}
 		}
+	} else if (argc > 1 && strcmp(argv[1], "-h") == 0) {
+		printf("usage: netcalc [-c hostname] [port]\n");
+		return 0;
 	} else {
 		CLIENT = 0;
 		afamiliy = AF_INET6;
