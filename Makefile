@@ -4,7 +4,7 @@ all: $(FILE) tests
 
 .PHONY: clean
 clean: 
-	rm $(FILE) netcalc test/results test/$(FILE).pid
+	rm $(FILE) test/results test/$(FILE).pid
 
 $(FILE): $(FILE).c
 	gcc $^ -o $@
