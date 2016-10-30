@@ -21,6 +21,7 @@ void cleanup(int signum)
 	if (close(SOCKFD) != 0) {
 		perror("close");
 	}
+	exit(1);
 }
 
 int prepaddr(char *host, char *port, struct addrinfo **ainfo, int afamily, int flags)
@@ -176,9 +177,9 @@ void bstr(unsigned int n, char **out)
 
 int server()
 {
+	struct sockaddr_storage c_addr;
+	socklen_t sin_size = sizeof c_addr;
 	while (1) {
-		struct sockaddr_storage c_addr;
-		socklen_t sin_size = sizeof c_addr;
 		int c_fd = accept(SOCKFD, (struct sockaddr *)&c_addr, &sin_size);
 
 		if (c_fd == -1) {
@@ -329,7 +330,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	cleanup(0);
 	freeaddrinfo(ainfo); // free the linked list
+	if (close(SOCKFD) != 0) {
+		perror("close");
+	}
 	return 0;
 }
