@@ -275,6 +275,12 @@ int client()
 
 int main(int argc, char *argv[])
 {
+	SOCKFD = 0;
+	struct sigaction action;
+	memset(&action, 0, sizeof(struct sigaction));
+	action.sa_handler = cleanup;
+	sigaction(SIGTERM, &action, NULL);
+
 	char* host = NULL;
 	char* port = "5000";
 	int afamiliy = AF_UNSPEC;
@@ -309,11 +315,6 @@ int main(int argc, char *argv[])
 	if ((SOCKFD = prepsocket(ainfo)) == -1) {
 		return 1;
 	}
-
-	struct sigaction action;
-	memset(&action, 0, sizeof(struct sigaction));
-	action.sa_handler = cleanup;
-	sigaction(SIGTERM, &action, NULL);
 
 	if (CLIENT) {
 		connectclient(ainfo);
