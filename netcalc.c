@@ -255,7 +255,7 @@ int client()
 		}
 
 		if (send(SOCKFD, buf, strlen(buf)+1, 0) == -1) {
-			perror("recv");
+			perror("send");
 			continue;
 		}
 
