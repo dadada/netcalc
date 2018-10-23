@@ -1,3 +1,4 @@
 # netcalc
-::
-  usage: netcalc [-c hostname] [port]
+```
+netcalc [-c hostname] [port]
+```
