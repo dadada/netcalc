@@ -9,7 +9,7 @@ clean:
 $(FILE): $(FILE).c
 	gcc $^ -o $@
 
-tests: $(FILE)
+test: $(FILE)
 	./$(FILE) & echo $$! > test/$(FILE).pid
 	./$(FILE) -c < test/cases > test/results
 	kill `cat test/$(FILE).pid`
