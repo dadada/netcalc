@@ -174,6 +174,7 @@ void bstr(unsigned int n, char **out) {
 }
 
 /// Starts a server that listens for commands and performs calculations
+/// @return 0 on success <0 on failure
 int server() {
     struct sockaddr_storage c_addr;
     socklen_t sin_size = sizeof c_addr;
@@ -218,8 +219,11 @@ int server() {
         }
         close(c_fd);
     }
+    return 0;
 }
 
+/// Connects the client to the server
+/// @return 0 on success <0 on failure
 int connectclient(struct addrinfo *ainfo) {
     if (connect(SOCKFD, ainfo->ai_addr, ainfo->ai_addrlen) == -1) {
         perror("connect");
@@ -228,6 +232,8 @@ int connectclient(struct addrinfo *ainfo) {
     return 0;
 }
 
+/// Starts a client
+/// @return 0 on success -1 on failure
 int client() {
     char buf[BUFLEN];
     size_t nullsize = 0;
