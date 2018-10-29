@@ -375,5 +375,6 @@ int main(int argc, char *argv[]) {
     if (close(SOCKFD) != 0) {
         perror("close");
     }
+    printf("closing\n");
     return 0;
 }
