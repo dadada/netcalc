@@ -4,7 +4,6 @@ FILE = netcalc
 
 all: $(FILE) test
 
-.PHONY: clean
 clean: 
 	rm $(FILE) test/results test/$(FILE).pid
 
