@@ -270,7 +270,7 @@ int connectclient(struct addrinfo *ainfo) {
 int client() {
     char buf[BUFLEN];
     size_t nullsize = 0;
-    char *line = NULL;
+    char *line = (char *) malloc(BUFLEN);
     while (getline(&line, &nullsize, stdin) != -1) {
         unsigned int num1;
         unsigned int num2;
@@ -293,10 +293,6 @@ int client() {
             perror("send");
             continue;
         }
-
-        free(line);
-        line = NULL; // so getline allocates a buffer for us
-
         memset(buf, 0, BUFLEN);
         ssize_t re_bytes_c = recv(SOCKFD, buf, sizeof buf, 0);
         if (re_bytes_c == -1) {
@@ -305,6 +301,7 @@ int client() {
         }
         printf("%s", buf);
     }
+    free(line);
     return 0;
 }
 
@@ -336,7 +333,7 @@ int main(int argc, char *argv[]) {
         return 0;
     } else {
         CLIENT = 0;
-        afamiliy = AF_UNSPEC;
+        afamiliy = AF_INET6;
         flags |= AI_PASSIVE;
         if (argc > 1) {
             port = argv[1];
