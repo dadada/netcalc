@@ -149,6 +149,10 @@ int parse(char *buf, size_t buflen, unsigned int *first, unsigned int *second, c
     return status;
 }
 
+/// Prints a formatted error to stderr and a buffer
+/// @param buf destination buffer
+/// @param buflen length of buf
+/// @param msg error message
 void report_error(char *buf, unsigned long buflen, char *msg) {
     fprintf(stderr, "%s\n", msg);
     memset(buf, 0, buflen);
