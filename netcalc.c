@@ -158,6 +158,8 @@ int parse(char *buf, size_t buflen, unsigned int *first, unsigned int *second, c
     char *num2str = NULL;
     char *opstr = NULL;
 
+
+
     ssize_t num_items = sscanf(buf, "%m[x0-9A-Fb]%m[+-*/]%m[x0-9A-Fb]", &num1str, &opstr, &num2str);
 
     int status = 0;
@@ -272,6 +274,10 @@ int client() {
     size_t nullsize = 0;
     char *line = NULL;
     while (getline(&line, &nullsize, stdin) != -1) {
+        if (strlen(line) <= 1) {
+            break;
+        }
+
         unsigned int num1;
         unsigned int num2;
         char op;
@@ -290,7 +296,7 @@ int client() {
         }
 
         if (send(SOCKFD, buf, strlen(buf)+1, 0) == -1) {
-            perror("send");
+            perror("error on send");
             continue;
         }
 
@@ -300,11 +306,12 @@ int client() {
         memset(buf, 0, BUFLEN);
         ssize_t re_bytes_c = recv(SOCKFD, buf, sizeof buf, 0);
         if (re_bytes_c == -1) {
-            perror("recv");
+            perror("error on receive");
             continue;
         }
         printf("%s", buf);
     }
+
     return 0;
 }
 
