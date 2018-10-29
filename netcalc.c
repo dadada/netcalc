@@ -72,6 +72,12 @@ int prepsocket(struct addrinfo *ainfo) {
     return SOCKFD;
 }
 
+/// Does the calculation
+/// @param num1 first operand
+/// @param num2 second operand
+/// @param op operator
+/// @param result stores the result of the calculation
+/// @return 0 on success, -1 on failure
 int calc(unsigned int num1, unsigned int num2, char op, unsigned int *result) {
     switch (op) {
     case '+':
@@ -101,6 +107,10 @@ int calc(unsigned int num1, unsigned int num2, char op, unsigned int *result) {
     return 0;
 }
 
+/// Converts a string into an integer using its base
+/// @param numstr input string
+/// @param num stores the decoded integer
+/// @return 0 on failure, the encoded base of the integer on success
 int base(char *numstr, unsigned int *num) {
     short base = 10;
 
@@ -116,7 +126,7 @@ int base(char *numstr, unsigned int *num) {
         *num = (unsigned int) test;
         return base;
     } else {
-        return 0;	
+        return 0;
     }
 }
 
