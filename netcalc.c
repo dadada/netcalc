@@ -273,7 +273,7 @@ int client() {
     char *line = (char *) malloc(BUFLEN);
     while (getline(&line, &linesize, stdin) != -1) {
         if (strlen(line) <= 1) {
-            printf("client: closing");
+            printf("client: closing\n");
             break;
         }
 
@@ -374,6 +374,5 @@ int main(int argc, char *argv[]) {
     if (close(SOCKFD) != 0) {
         perror("close");
     }
-    printf("closing\n");
     return 0;
 }
