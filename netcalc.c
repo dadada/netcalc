@@ -136,6 +136,13 @@ int base(char *numstr, unsigned int *num) {
     }
 }
 
+/// Parses the client input into a command
+/// @param buf source buffer
+/// @param buflen length of source buffer
+/// @param first first operand
+/// @param second second operand
+/// @param op operator (+,-,*,/)
+/// @return 0 on success -1 on parser error, -2 on invalid values
 int parse(char *buf, size_t buflen, unsigned int *first, unsigned int *second, char *op) {
     char *num1str = NULL;
     char *num2str = NULL;
@@ -165,12 +172,19 @@ int parse(char *buf, size_t buflen, unsigned int *first, unsigned int *second, c
     return status;
 }
 
+/// Prints a formatted error to stderr and a buffer
+/// @param buf destination buffer
+/// @param buflen length of buf
+/// @param msg error message
 void report_error(char *buf, unsigned long buflen, char *msg) {
     fprintf(stderr, "%s\n", msg);
     memset(buf, 0, buflen);
     sprintf(buf, "%s\n", msg);
 }
 
+/// Converts an integer into a string representation of its binary encoding
+/// @param n an integer
+/// @param out stores the resulting string
 void bstr(unsigned int n, char **out) {
     // voodoo
     int msb =  32 - __builtin_clz(n);
@@ -182,6 +196,8 @@ void bstr(unsigned int n, char **out) {
     }
 }
 
+/// Starts a server that listens for commands and performs calculations
+/// @return 0 on success <0 on failure
 int server() {
     struct sockaddr_storage c_addr;
     socklen_t sin_size = sizeof c_addr;
@@ -226,8 +242,11 @@ int server() {
         }
         close(c_fd);
     }
+    return 0;
 }
 
+/// Connects the client to the server
+/// @return 0 on success <0 on failure
 int connectclient(struct addrinfo *ainfo) {
     if (connect(SOCKFD, ainfo->ai_addr, ainfo->ai_addrlen) == -1) {
         perror("connect");
@@ -236,6 +255,8 @@ int connectclient(struct addrinfo *ainfo) {
     return 0;
 }
 
+/// Starts a client
+/// @return 0 on success -1 on failure
 int client() {
     char buf[BUFLEN];
     size_t nullsize = 0;
