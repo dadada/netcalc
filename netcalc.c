@@ -16,6 +16,8 @@ int SOCKFD;
 
 int CLIENT;
 
+/// closes socket, signal handler
+/// @param signum
 void cleanup(int signum) {
     if (close(SOCKFD) != 0) {
         perror("close");
@@ -23,6 +25,13 @@ void cleanup(int signum) {
     exit(1);
 }
 
+/// Fills addrinfo with given params
+/// @param host
+/// @param port to bind
+/// @param ainfo the addrinfo struct to fill
+/// @param afamily specifies protocol family
+/// @param flags
+/// @return 0 if success, -1 if stderr
 int prepaddr(char *host, char *port, struct addrinfo **ainfo, int afamily, int flags) {
     struct addrinfo hints; // hints to what we want
     memset(&hints, 0, sizeof hints);
@@ -39,14 +48,18 @@ int prepaddr(char *host, char *port, struct addrinfo **ainfo, int afamily, int f
     return 0;
 }
 
+/// Binds to sockd
+/// @param sockd the socket to bind to
+/// @param ainfo information for binding
+/// @return sockd freshly bound socket or -1 if error
 int bindsocket(int sockd, struct addrinfo *ainfo) {
-    if (bind(SOCKFD, ainfo->ai_addr, ainfo->ai_addrlen) != 0) {
+    if (bind(sockd, ainfo->ai_addr, ainfo->ai_addrlen) != 0) {
         perror("bind");
         cleanup(0);
         return -1;
     }
 
-    if (listen(SOCKFD, 5) != 0) {
+    if (listen(sockd, 5) != 0) {
         perror("listen");
         cleanup(0);
         return -1;
@@ -54,6 +67,9 @@ int bindsocket(int sockd, struct addrinfo *ainfo) {
     return sockd;
 }
 
+/// Prepares SOCKFD socket for further use
+/// @param ainfo addrinfo struct to configure SOCKFD
+/// @returns SOCKFD if successfull
 int prepsocket(struct addrinfo *ainfo) {
     SOCKFD = socket(ainfo->ai_family, ainfo->ai_socktype, ainfo->ai_protocol);
 
@@ -273,7 +289,7 @@ int main(int argc, char *argv[]) {
 
     char* host = NULL;
     char* port = "5000";
-    int afamiliy = AF_UNSPEC;
+    int afamiliy = AF_UNSPEC; /// should do v4 and v6 compatibility
     int flags = 0;
 
     if (argc > 1 && strcmp(argv[1], "-c") == 0) {
@@ -289,7 +305,7 @@ int main(int argc, char *argv[]) {
         return 0;
     } else {
         CLIENT = 0;
-        afamiliy = AF_INET6;
+        afamiliy = AF_UNSPEC;
         flags |= AI_PASSIVE;
         if (argc > 1) {
             port = argv[1];
