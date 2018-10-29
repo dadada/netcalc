@@ -271,9 +271,9 @@ int connectclient(struct addrinfo *ainfo) {
 /// @return 0 on success -1 on failure
 int client() {
     char buf[BUFLEN];
-    size_t nullsize = 0;
+    size_t linesize = BUFLEN;
     char *line = (char *) malloc(BUFLEN);
-    while (getline(&line, &nullsize, stdin) != -1) {
+    while (getline(&line, &linesize, stdin) != -1) {
         if (strlen(line) <= 1) {
             break;
         }
