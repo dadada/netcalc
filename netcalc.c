@@ -173,6 +173,7 @@ void bstr(unsigned int n, char **out) {
     }
 }
 
+/// Starts a server that listens for commands and performs calculations
 int server() {
     struct sockaddr_storage c_addr;
     socklen_t sin_size = sizeof c_addr;
