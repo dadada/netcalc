@@ -158,8 +158,6 @@ int parse(char *buf, size_t buflen, unsigned int *first, unsigned int *second, c
     char *num2str = NULL;
     char *opstr = NULL;
 
-
-
     ssize_t num_items = sscanf(buf, "%m[x0-9A-Fb]%m[+-*/]%m[x0-9A-Fb]", &num1str, &opstr, &num2str);
 
     int status = 0;
@@ -217,7 +215,7 @@ int server() {
         int c_fd = accept(SOCKFD, (struct sockaddr *)&c_addr, &sin_size);
 
         if (c_fd == -1) {
-            perror("accept");
+            perror("server: accept");
             continue; // we do not care
         }
 
@@ -226,7 +224,7 @@ int server() {
         ssize_t byte_count;
         while ((byte_count = recv(c_fd, buf, sizeof buf, 0)) != 0) {
             if (byte_count == -1) {
-                perror("recv");
+                perror("server: recv");
                 break;
             }
 
@@ -248,7 +246,7 @@ int server() {
             }
 
             if (send(c_fd, buf, strlen(buf)+1, 0) == -1) {
-                perror("send");
+                perror("server: send");
                 continue;
             }
         }
@@ -275,6 +273,7 @@ int client() {
     char *line = (char *) malloc(BUFLEN);
     while (getline(&line, &linesize, stdin) != -1) {
         if (strlen(line) <= 1) {
+            printf("client: closing");
             break;
         }
 
@@ -287,7 +286,7 @@ int client() {
         int status = parse(line, strlen(line)+1, &num1, &num2, &op);
 
         if (status == -1) {
-            report_error(buf, BUFLEN, "parse: failed to parse");
+            report_error(buf, BUFLEN, "client: failed to parse");
             continue;
         } else if (status == -2) {
             sprintf(buf, "%u%c%s", num1, '+', "0");
@@ -296,13 +295,13 @@ int client() {
         }
 
         if (send(SOCKFD, buf, strlen(buf)+1, 0) == -1) {
-            perror("error on send");
+            perror("client: error on send");
             continue;
         }
         memset(buf, 0, BUFLEN);
         ssize_t re_bytes_c = recv(SOCKFD, buf, sizeof buf, 0);
         if (re_bytes_c == -1) {
-            perror("error on receive");
+            perror("client: error on receive");
             continue;
         }
         printf("%s", buf);
