@@ -155,6 +155,9 @@ void report_error(char *buf, unsigned long buflen, char *msg) {
     sprintf(buf, "%s\n", msg);
 }
 
+/// Converts an integer into a string representation of its binary encoding
+/// @param n an integer
+/// @param out stores the resulting string
 void bstr(unsigned int n, char **out) {
     // voodoo
     int msb =  32 - __builtin_clz(n);
