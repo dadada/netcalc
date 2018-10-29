@@ -120,6 +120,13 @@ int base(char *numstr, unsigned int *num) {
     }
 }
 
+/// Parses the client input into a command
+/// @param buf source buffer
+/// @param buflen length of source buffer
+/// @param first first operand
+/// @param second second operand
+/// @param op operator (+,-,*,/)
+/// @return 0 on success -1 on parser error, -2 on invalid values
 int parse(char *buf, size_t buflen, unsigned int *first, unsigned int *second, char *op) {
     char *num1str = NULL;
     char *num2str = NULL;
