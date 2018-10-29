@@ -261,6 +261,9 @@ int client() {
     return 0;
 }
 
+/// The main method, starts depending on the args as client or server
+/// @param argc argument count
+/// @param argv array of options, -c for client followed by hostname and port
 int main(int argc, char *argv[]) {
     SOCKFD = 0;
     struct sigaction action;
