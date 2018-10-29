@@ -2,3 +2,4 @@ netcalc
 test/results
 test/netcalc.pid
 .gitconfig
+.idea
