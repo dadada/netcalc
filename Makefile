@@ -1,6 +1,8 @@
+.PHONY: all clean test
+
 FILE = netcalc
 
-all: $(FILE) tests
+all: $(FILE) test
 
 .PHONY: clean
 clean: 
